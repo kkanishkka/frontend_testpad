@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Chessboard Grid</title>
+</head>
+<body>
+
+<script>
+// User story 1: function to print a label to the document body
+function print(data) {
+  const label = document.createElement('label');
+  label.textContent = data;
+  document.body.appendChild(label);
+}
+
+// User story 2: function to create a line break
+function newLine() {
+  const br = document.createElement('br');
+  document.body.appendChild(br);
+}
+
+// User story 3: variable for board size
+const board_size = 8;  // Change this to any number for different sizes
+
+// User story 4: create the chessboard grid
+function createChessboard(size) {
+  for (let row = 0; row < size; row++) {
+    let line = "";
+    for (let col = 0; col < size; col++) {
+      // If sum of row and col is even, print "*", else print "#"
+      line += ((row + col) % 2 === 0) ? " * " : " # ";
+    }
+    print(line);  // Print the row
+    newLine();    // Go to next line
+  }
+}
+
+// Run the function to create and display the chessboard
+createChessboard(board_size);
+</script>
+
+</body>
+</html>
