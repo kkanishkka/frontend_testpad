@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Online Compiler</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            width: 500px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+        textarea {
+            width: 100%;
+            height: 200px;
+            margin-top: 10px;
+            padding: 10px;
+            font-family: monospace;
+        }
+        select, button {
+            margin-top: 10px;
+            padding: 8px;
+            font-size: 16px;
+        }
+        .output {
+            background: #222;
+            color: #0f0;
+            padding: 10px;
+            margin-top: 15px;
+            height: 150px;
+            overflow-y: auto;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Online Code Compiler</h2>
+    <label for="language">Select Language:</label>
+    <select id="language">
+        <option value="0">Python</option>
+        <option value="4">JavaScript</option>
+        <option value="7">C</option>
+        <option value="77">C++</option>
+        <option value="8">Java</option>
+    </select>
+
+    <textarea id="code" placeholder="Write your code here..."></textarea>
+    <button id="runCode">Run Code</button>
+
+    <div class="output" id="outputConsole">Output will appear here...</div>
+</div>
+
+<script>
+document.getElementById("runCode").addEventListener("click", function() {
+    let code = document.getElementById("code").value;
+    let langId = document.getElementById("language").value;
+    let outputDiv = document.getElementById("outputConsole");
+    
+    if (!code.trim()) {
+        outputDiv.innerHTML = "⚠️ Please enter some code!";
+        return;
+    }
+    
+    outputDiv.innerHTML = "⏳ Running your code...";
+
+    // Step 1: Send POST request to execute code
+    fetch("https://codequotient.com/api/executeCode", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: code, langId: langId })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.error) {
+            outputDiv.innerHTML = "❌ Error: " + data.error;
+            return;
+        }
+        let codeId = data.codeId;
+        let interval = setInterval(() => {
+            fetch(`https://codequotient.com/api/codeResult/${codeId}`)
+                .then(res => res.json())
+                .then(result => {
+                    if (result.data && Object.keys(result.data).length > 0) {
+                        clearInterval(interval);
+                        if (result.data.errors) {
+                            outputDiv.innerHTML = "❌ Errors:\n" + result.data.errors;
+                        } else {
+                            outputDiv.innerHTML = "✅ Output:\n" + result.data.output;
+                        }
+                    }
+                });
+        }, 2000);
+    })
+    .catch(err => {
+        outputDiv.innerHTML = "⚠️ Request failed: " + err;
+    });
+});
+</script>
+
+</body>
+</html>
