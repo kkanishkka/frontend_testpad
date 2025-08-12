@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Discussion Portal</title>
+<style>
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+}
+header {
+    background-color: #00796B;
+    color: white;
+    padding: 10px 20px;
+    font-size: 24px;
+    font-weight: bold;
+}
+.container {
+    display: flex;
+    height: calc(100vh - 50px);
+}
+.left-pane {
+    width: 30%;
+    background: #f5f5f5;
+    border-right: 1px solid #ccc;
+    display: flex;
+    flex-direction: column;
+}
+.top-controls {
+    display: flex;
+    gap: 10px;
+    padding: 10px;
+}
+.top-controls button {
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 6px 10px;
+    cursor: pointer;
+    border-radius: 4px;
+}
+.top-controls input {
+    flex: 1;
+    padding: 6px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+.question-list {
+    flex: 1;
+    overflow-y: auto;
+}
+.question-item {
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+    cursor: pointer;
+}
+.question-item h4 {
+    margin: 0;
+}
+.vote-controls {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+}
+.vote-controls button {
+    padding: 2px 6px;
+}
+.right-pane {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+}
+form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+input, textarea {
+    padding: 6px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-family: inherit;
+}
+button {
+    cursor: pointer;
+}
+.response {
+    border: 1px solid #ccc;
+    padding: 10px;
+    margin-top: 5px;
+    border-radius: 4px;
+}
+</style>
+</head>
+<body>
+
+<header>Discussion Portal</header>
+<div class="container">
+    <div class="left-pane">
+        <div class="top-controls">
+            <button id="newQuestionBtn">New Question form</button>
+            <input type="text" id="searchBox" placeholder="search questions...">
+        </div>
+        <div class="question-list" id="questionList"></div>
+    </div>
+    <div class="right-pane" id="rightPane">
+        <!-- Default form -->
+        <h2>Welcome to Discussion Portal !</h2>
+        <p>Enter a subject and question to get started</p>
+        <form id="questionForm">
+            <input type="text" id="title" placeholder="Subject" required>
+            <textarea id="question" placeholder="Question" required></textarea>
+            <button type="submit">Submit</button>
+        </form>
+    </div>
+</div>
+
+<script>
+let questions = JSON.parse(localStorage.getItem('questions')) || [];
+let currentQuestionId = null;
+
+function saveQuestions() {
+    localStorage.setItem('questions', JSON.stringify(questions));
+}
+
+function sortQuestions() {
+    questions.sort((a, b) => b.votes - a.votes);
+}
+
+function renderQuestions(filter = '') {
+    const list = document.getElementById('questionList');
+    list.innerHTML = '';
+    sortQuestions();
+    const filtered = questions.filter(q => q.title.toLowerCase().includes(filter.toLowerCase()));
+    if (filtered.length === 0) {
+        list.innerHTML = '<p style="padding:10px;">No questions found</p>';
+        return;
+    }
+    filtered.forEach(q => {
+        const div = document.createElement('div');
+        div.className = 'question-item';
+        div.innerHTML = `
+            <h4>${q.title}</h4>
+            <p>${q.text}</p>
+            <div class="vote-controls">
+                <button onclick="voteQuestion(event, ${q.id}, 1)">⬆</button>
+                <span>${q.votes}</span>
+                <button onclick="voteQuestion(event, ${q.id}, -1)">⬇</button>
+            </div>
+        `;
+        div.addEventListener('click', () => openQuestion(q.id));
+        list.appendChild(div);
+    });
+}
+
+function voteQuestion(e, id, delta) {
+    e.stopPropagation();
+    const q = questions.find(q => q.id === id);
+    q.votes += delta;
+    saveQuestions();
+    renderQuestions(document.getElementById('searchBox').value);
+}
+
+function openQuestion(id) {
+    currentQuestionId = id;
+    const q = questions.find(q => q.id === id);
+    const pane = document.getElementById('rightPane');
+    pane.innerHTML = `
+        <h2>${q.title}</h2>
+        <p>${q.text}</p>
+        <div class="vote-controls">
+            <button onclick="voteQuestion(event, ${q.id}, 1)">⬆</button>
+            <span>${q.votes}</span>
+            <button onclick="voteQuestion(event, ${q.id}, -1)">⬇</button>
+        </div>
+        <button onclick="resolveQuestion(${q.id})">Resolve</button>
+        <h3>Previous Answers</h3>
+        <div id="responses">
+            ${q.responses.sort((a,b)=>b.votes-a.votes).map(r=>`
+                <div class="response">
+                    <strong>${r.name}</strong>: ${r.comment}
+                    <div class="vote-controls">
+                        <button onclick="voteResponse(event, ${q.id}, ${r.id}, 1)">⬆</button>
+                        <span>${r.votes}</span>
+                        <button onclick="voteResponse(event, ${q.id}, ${r.id}, -1)">⬇</button>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+        <h3>Add Response</h3>
+        <form id="responseForm">
+            <input type="text" id="resName" placeholder="Name" required>
+            <textarea id="resComment" placeholder="Comment" required></textarea>
+            <button type="submit">Submit</button>
+        </form>
+    `;
+    document.getElementById('responseForm').addEventListener('submit', e => {
+        e.preventDefault();
+        const name = document.getElementById('resName').value.trim();
+        const comment = document.getElementById('resComment').value.trim();
+        if (!name || !comment) return;
+        q.responses.push({ id: Date.now(), name, comment, votes: 0 });
+        saveQuestions();
+        openQuestion(q.id);
+    });
+}
+
+function voteResponse(e, qid, rid, delta) {
+    e.stopPropagation();
+    const q = questions.find(q => q.id === qid);
+    const r = q.responses.find(r => r.id === rid);
+    r.votes += delta;
+    saveQuestions();
+    openQuestion(qid);
+}
+
+function resolveQuestion(id) {
+    questions = questions.filter(q => q.id !== id);
+    saveQuestions();
+    showNewQuestionForm();
+    renderQuestions();
+}
+
+function showNewQuestionForm() {
+    const pane = document.getElementById('rightPane');
+    pane.innerHTML = `
+        <h2>Welcome to Discussion Portal !</h2>
+        <p>Enter a subject and question to get started</p>
+        <form id="questionForm">
+            <input type="text" id="title" placeholder="Subject" required>
+            <textarea id="question" placeholder="Question" required></textarea>
+            <button type="submit">Submit</button>
+        </form>
+    `;
+    document.getElementById('questionForm').addEventListener('submit', addQuestion);
+}
+
+function addQuestion(e) {
+    e.preventDefault();
+    const title = document.getElementById('title').value.trim();
+    const text = document.getElementById('question').value.trim();
+    if (!title || !text) return;
+    questions.push({ id: Date.now(), title, text, votes: 0, responses: [] });
+    saveQuestions();
+    renderQuestions();
+    e.target.reset();
+}
+
+document.getElementById('newQuestionBtn').addEventListener('click', showNewQuestionForm);
+document.getElementById('searchBox').addEventListener('input', e => {
+    renderQuestions(e.target.value);
+});
+document.getElementById('questionForm').addEventListener('submit', addQuestion);
+
+renderQuestions();
+</script>
+
+</body>
+</html>
