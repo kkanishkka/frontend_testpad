@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Repo Finder</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            width: 300px;
+            text-align: center;
+            box-shadow: 0px 0px 10px rgba(0,0,0,0.2);
+        }
+        input {
+            padding: 10px;
+            width: 90%;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px 15px;
+            border: none;
+            background: #007BFF;
+            color: white;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        ul {
+            list-style: none;
+            padding: 0;
+            margin-top: 15px;
+            text-align: left;
+        }
+        li {
+            padding: 8px;
+            background: #f8f8f8;
+            margin-bottom: 5px;
+            border-radius: 5px;
+        }
+        li a {
+            text-decoration: none;
+            color: #007BFF;
+        }
+        li a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>GitHub Repo Finder</h2>
+        <form id="githubForm">
+            <input type="text" id="username" placeholder="Github username..." required>
+            <br>
+            <button type="submit">Get Repos</button>
+        </form>
+        <ul id="repoList"></ul>
+    </div>
+
+    <script>
+        document.getElementById("githubForm").addEventListener("submit", function(e) {
+            e.preventDefault(); // prevent page reload
+
+            let username = document.getElementById("username").value.trim();
+            let repoList = document.getElementById("repoList");
+            repoList.innerHTML = "<li>Loading...</li>";
+
+            fetch(`https://api.github.com/users/${username}/repos`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error("User not found");
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    repoList.innerHTML = "";
+                    if (data.length === 0) {
+                        repoList.innerHTML = "<li>No repositories found</li>";
+                        return;
+                    }
+                    data.forEach(repo => {
+                        let li = document.createElement("li");
+                        let link = document.createElement("a");
+                        link.href = repo.html_url;
+                        link.target = "_blank";
+                        link.textContent = repo.name;
+                        li.appendChild(link);
+                        repoList.appendChild(li);
+                    });
+                })
+                .catch(error => {
+                    repoList.innerHTML = `<li>${error.message}</li>`;
+                });
+        });
+    </script>
+</body>
+</html>
